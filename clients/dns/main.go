@@ -8,8 +8,7 @@ func main() {
 		slog.Error(err.Error())
 	}
 
-	err = l.listen()
-	if err != nil {
+	if err = l.listen(); err != nil {
 		slog.Error(err.Error())
 	}
 }

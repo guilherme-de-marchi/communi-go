@@ -12,6 +12,7 @@ import (
 
 type listener struct {
 	dns      map[string]string
+	commands map[string]command
 	listener net.Listener
 	mutex    sync.Mutex
 }
@@ -24,6 +25,7 @@ func newListener() (*listener, error) {
 
 	return &listener{
 		dns:      make(map[string]string),
+		commands: commands,
 		listener: l,
 	}, nil
 }
@@ -78,7 +80,7 @@ func (l *listener) handleConn(c net.Conn) error {
 		}
 
 		tokens := strings.Split(data, " ")
-		out := getCommandFunc(tokens[0])(l, tokens)
+		out := getCommand(tokens[0]).run(l, tokens)
 		c.Write(message(out))
 	}
 }

@@ -2,13 +2,15 @@ package main
 
 import "fmt"
 
-type commandFunc func(*listener, []string) string
-
 type command struct {
 	key,
 	template,
 	description string
-	f commandFunc
+	f func(command, *listener, []string) string
+}
+
+func (c command) run(l *listener, tokens []string) string {
+	return c.f(c, l, tokens)
 }
 
 var (
@@ -47,6 +49,10 @@ var (
 		f:           count,
 	}
 
+	commandNotFound = command{
+		f: notFound,
+	}
+
 	commands = loadCommandsMap(
 		commandHelp,
 		commandSet,
@@ -56,29 +62,13 @@ var (
 	)
 )
 
-func loadCommandsMap(commands ...command) map[string]command {
-	m := make(map[string]command)
-	for _, c := range commands {
-		m[c.key] = c
-	}
-	return m
+func help(_ command, l *listener, _ []string) string {
+	return fmt.Sprintf("%+v", l.commands)
 }
 
-func getCommandFunc(k string) commandFunc {
-	c, ok := commands[k]
-	if !ok {
-		return notFound
-	}
-	return c.f
-}
-
-func help(_ *listener, _ []string) string {
-	return "command list: -----"
-}
-
-func set(l *listener, tokens []string) string {
+func set(c command, l *listener, tokens []string) string {
 	if len(tokens) < 3 {
-		return "register <name> <addr>"
+		return c.template
 	}
 
 	name := tokens[1]
@@ -91,9 +81,9 @@ func set(l *listener, tokens []string) string {
 	return "domain setted with success"
 }
 
-func get(l *listener, tokens []string) string {
+func get(c command, l *listener, tokens []string) string {
 	if len(tokens) < 2 {
-		return "invalid arguments"
+		return c.template
 	}
 
 	name := tokens[1]
@@ -105,14 +95,30 @@ func get(l *listener, tokens []string) string {
 	return addr
 }
 
-func ls(l *listener, _ []string) string {
+func ls(_ command, l *listener, _ []string) string {
 	return fmt.Sprintf("%+v", l.dns)
 }
 
-func count(l *listener, _ []string) string {
+func count(_ command, l *listener, _ []string) string {
 	return fmt.Sprint(len(l.dns))
 }
 
-func notFound(_ *listener, _ []string) string {
+func notFound(_ command, _ *listener, _ []string) string {
 	return "command not found"
+}
+
+func loadCommandsMap(commands ...command) map[string]command {
+	m := make(map[string]command)
+	for _, c := range commands {
+		m[c.key] = c
+	}
+	return m
+}
+
+func getCommand(k string) command {
+	c, ok := commands[k]
+	if !ok {
+		return commandNotFound
+	}
+	return c
 }
